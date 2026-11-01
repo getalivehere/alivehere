@@ -1302,20 +1302,25 @@ function renderPage(){
   saveProgress();
 }
 
-/* 偏好确认只对产生它的那一份答案有效：任一正式题/补充题答案实际变更时，
-   已保存的偏好确认选择全部失效，重新提交时仍有平局维度必须重新自评。
+/* 偏好确认按维度失效：某道正式题/补充题的答案实际变更时，只清除该题所属维度的
+   旧偏好确认记录，其他维度的有效自评保留。重新提交时：被清除且修改后仍为平局
+   （原始分 0）的维度须重新自评；修改后不再平局的维度按新分数直接定字母，不再询问。
    与补测的 syncSuppWithWeak 相互独立、互不影响（补测集合仍只由弱维度集合决定）。 */
-function invalidatePref(){
-  prefChoices = {};
-  prefPending = [];
-  prefTemp = {};
+function invalidatePrefDim(dimKey){
+  if(!dimKey) return;
+  delete prefChoices[dimKey];
+  delete prefTemp[dimKey];
 }
 
 /* 选中某题某档：单选互斥、高亮同步、答后取消未答高亮，并立即暂存 */
 function applyAnswer(qi, vv){
   if(OPT_VALS.indexOf(vv) < 0) return;
   var arr = activeAnswers();
-  if(arr[qi] !== vv) invalidatePref();   /* 答案实际发生变化才失效；点选同一档位不算修改 */
+  if(arr[qi] !== vv){
+    /* 答案实际发生变化：仅该题所属维度的偏好确认失效；点选同一档位不算修改，不触发任何清除 */
+    var q = activeQuestions()[qi];
+    invalidatePrefDim(q ? q.d : null);
+  }
   arr[qi] = vv;
   var card = document.querySelector('#qlist [data-card="'+qi+'"]');
   if(card){
@@ -1719,7 +1724,7 @@ var PREF_ITEMS = {
  EI:{q:"空闲时间，你通常更想怎么过？", left:"约上朋友出门聚会", right:"一个人安静待着"},
  SN:{q:"了解一件新事物时，你更先注意什么？", left:"具体的细节和实际的样子", right:"它背后的可能性和关联"},
  TF:{q:"做决定时，你通常更先考虑什么？", left:"事实和道理是否说得通", right:"相关的人感受如何"},
- JP:{q:"安排自己的时间时，你更喜欢哪种状态？", left:"提前计划好，按步就班", right:"保留弹性，随机应变"},
+ JP:{q:"安排自己的时间时，你更喜欢哪种状态？", left:"提前安排好，按计划推进", right:"保留弹性，随机应变"},
  AO:{q:"面对几个都可以的选项，你通常更接近哪种？", left:"较快选定一个，不再多想", right:"反复权衡，确认后再定"},
  CH:{q:"情绪上来的时候，你通常更接近哪种？", left:"表情和语气比较克制", right:"直接表现出来，藏不住"}
 };
@@ -2016,6 +2021,10 @@ function prepareCardData(res){
     return {key:dm.key, l:dm.l, r:dm.r, ln:dm.ln, rn:dm.rn, title:dm.title,
       leftPct:p, rightPct:100 - p, leftTxt:fmtPct(p), rightTxt:fmtPct(100 - p),
       winLetter:win, leftWin:!rightWin, rightWin:rightWin,
+      /* 自评标记：该维在 res.selfDims 中即表示量化恰为 50.0/50.0 平局且字母由偏好确认
+         自评确定（computeResult 仅对平局维写入 selfDims）；drawCard 据此加「自评确定」标识，
+         非平局维此字段为 false、展示保持原样 */
+      selfConfirmed: !!(res.selfDims && res.selfDims.indexOf(dm.key) >= 0),
       winPctTxt:fmtPct(rightWin ? (100 - p) : p)};
   });
 }
@@ -2100,6 +2109,17 @@ function drawCard(res, t, img){
     rrPath(ctx, barX, barY, barW, 16, 8); ctx.fillStyle = "#efedf7"; ctx.fill();
     var fw = Math.max(0, Math.min(barW, barW * cd.leftPct / 100));
     if(fw > 1){ rrPath(ctx, barX, barY, fw, 16, 8); ctx.fillStyle = "#6a4fe0"; ctx.fill(); }
+    /* 平局自评维度专属标识：仅 selfConfirmed 的维度在比例条中点加一枚紫色小签「自评确定」，
+       只说明该字母由偏好确认自评确定，不暗示任何量化优势；非平局维不绘制、保持原样 */
+    if(cd.selfConfirmed){
+      var tagTxt = "自评确定";
+      ctx.font = "700 20px " + FONT_STACK;
+      var tagW = ctx.measureText(tagTxt).width + 28;
+      var tagX = 540 - tagW/2, tagY = barY - 7;
+      rrPath(ctx, tagX, tagY, tagW, 30, 15); ctx.fillStyle = "#6a4fe0"; ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.textAlign = "center";
+      ctx.fillText(tagTxt, 540, tagY + 20);
+    }
   });
   /* 卡底说明 */
   ctx.textAlign = "center"; ctx.fillStyle = "#8a87a6"; ctx.font = "400 24px " + FONT_STACK;
