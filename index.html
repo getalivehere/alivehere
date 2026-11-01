@@ -365,7 +365,13 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
 .pref-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:0 0 16px;text-align:left}
 .pref-card h3{margin:0 0 6px;font-size:17px;color:var(--purple-ink)}
 .pref-card p{margin:0 0 14px;color:var(--mut);font-size:13.5px;line-height:1.6}
+.pref-card p.pref-q{font-size:16.5px;font-weight:700;color:var(--ink);line-height:1.55;margin:0 0 6px}
 .pref-opts{display:flex;flex-direction:column;gap:10px}
+@media (max-width:560px){
+  .pref-card{padding:18px 16px}
+  .pref-opt{font-size:14.5px;padding:12px 14px}
+  .pref-card p.pref-q{font-size:16px}
+}
 .pref-opt{border:1.5px solid var(--lav2);background:#fff;border-radius:12px;padding:13px 16px;font-size:15px;font-weight:600;color:var(--ink);text-align:left;line-height:1.55}
 .pref-opt:hover{border-color:var(--purple)}
 .pref-opt.sel{background:var(--lav);border-color:var(--purple);color:var(--purple-d)}
@@ -1296,10 +1302,21 @@ function renderPage(){
   saveProgress();
 }
 
+/* 偏好确认只对产生它的那一份答案有效：任一正式题/补充题答案实际变更时，
+   已保存的偏好确认选择全部失效，重新提交时仍有平局维度必须重新自评。
+   与补测的 syncSuppWithWeak 相互独立、互不影响（补测集合仍只由弱维度集合决定）。 */
+function invalidatePref(){
+  prefChoices = {};
+  prefPending = [];
+  prefTemp = {};
+}
+
 /* 选中某题某档：单选互斥、高亮同步、答后取消未答高亮，并立即暂存 */
 function applyAnswer(qi, vv){
   if(OPT_VALS.indexOf(vv) < 0) return;
-  activeAnswers()[qi] = vv;
+  var arr = activeAnswers();
+  if(arr[qi] !== vv) invalidatePref();   /* 答案实际发生变化才失效；点选同一档位不算修改 */
+  arr[qi] = vv;
   var card = document.querySelector('#qlist [data-card="'+qi+'"]');
   if(card){
     card.classList.remove("missed");
@@ -1699,12 +1716,12 @@ function computeResult(){
    主测+补测全部完成后，若仍有原始分恰好为 0 的维度，先逐维做二选一自评，
    自评不计入量化分数；全部选定后才生成报告，报告中标注「由偏好确认自评确定」。 */
 var PREF_ITEMS = {
- EI:{left:"休息时我更想约人出门", right:"休息时我更想自己待着"},
- SN:{left:"我更相信看得见、摸得着的事实和经验", right:"我更常想到事情背后的可能性和趋势"},
- TF:{left:"做决定时，我更先看逻辑和事实是否成立", right:"做决定时，我更先考虑大家的感受"},
- JP:{left:"我更喜欢提前安排好、心里有数", right:"我更喜欢留点弹性、到时再看"},
- AO:{left:"信息差不多够了，我就能较快定下来，并保持这个选择", right:"我更想多比较、多权衡一会儿再定下来"},
- CH:{left:"我的感受不太容易从表情、语气上看出来", right:"我的感受很容易从表情、语气上看出来"}
+ EI:{q:"空闲时间，你通常更想怎么过？", left:"约上朋友出门聚会", right:"一个人安静待着"},
+ SN:{q:"了解一件新事物时，你更先注意什么？", left:"具体的细节和实际的样子", right:"它背后的可能性和关联"},
+ TF:{q:"做决定时，你通常更先考虑什么？", left:"事实和道理是否说得通", right:"相关的人感受如何"},
+ JP:{q:"安排自己的时间时，你更喜欢哪种状态？", left:"提前计划好，按步就班", right:"保留弹性，随机应变"},
+ AO:{q:"面对几个都可以的选项，你通常更接近哪种？", left:"较快选定一个，不再多想", right:"反复权衡，确认后再定"},
+ CH:{q:"情绪上来的时候，你通常更接近哪种？", left:"表情和语气比较克制", right:"直接表现出来，藏不住"}
 };
 function showPrefView(dims){
   prefPending = dims.slice();
@@ -1715,7 +1732,8 @@ function showPrefView(dims){
     DIMS.forEach(function(d){ if(d.key===k) dm = d; });
     var it = PREF_ITEMS[k];
     html += '<div class="pref-card"><h3>' + dm.title + '（' + dm.l + ' / ' + dm.r + '）</h3>' +
-      '<p>这一维的量化分数恰好平局，请选更像你日常样子的一项。</p><div class="pref-opts">' +
+      '<p class="pref-q">' + it.q + '</p>' +
+      '<p>这一维量化分数恰好平局（50.0），请选更贴近你日常状态的一项。</p><div class="pref-opts">' +
       '<button class="pref-opt" data-pref-dim="' + k + '" data-pref-letter="' + dm.l + '">' + dm.l + ' · ' + it.left + '</button>' +
       '<button class="pref-opt" data-pref-dim="' + k + '" data-pref-letter="' + dm.r + '">' + dm.r + ' · ' + it.right + '</button>' +
       '</div></div>';
@@ -1865,12 +1883,17 @@ function renderResult(res, isPreview){
     var info = (res.dims && res.dims[dm.key]) ? res.dims[dm.key] : null;
     var weak = info ? info.weak : (p>=WEAK_LO && p<=WEAK_HI);
     var leftWin = p > 50, rightWin = p < 50;
-    var winLetter = rightWin ? dm.r : dm.l;
     var selfConfirmed = !isPreview && res.selfDims && res.selfDims.indexOf(dm.key) >= 0;
+    if(selfConfirmed){
+      /* 平局（50.0）自评维度：突出侧以最终字母为准，与人格代码、分享卡片一致 */
+      var fl = finalLetterOf(res, dm.key);
+      leftWin = (fl === dm.l); rightWin = (fl === dm.r);
+    }
+    var winLetter = rightWin ? dm.r : dm.l;
     var noteHtml;
     if(selfConfirmed){
       /* 用结果字母重述，避免平局时按 50 误判方向 */
-      var resLetter = dm.key==="EI" ? res.base[0] : dm.key==="SN" ? res.base[1] : dm.key==="TF" ? res.base[2] : dm.key==="JP" ? res.base[3] : dm.key==="AO" ? res.ao : res.ch;
+      var resLetter = finalLetterOf(res, dm.key);
       noteHtml = '<span class="weak-badge">偏好确认</span>这一维量化分数恰好平局，字母 ' + resLetter + ' 由偏好确认自评确定（自评不计入量化分数）。';
     } else if(weak){
       noteHtml = '<span class="weak-badge">倾向不明显</span>这一维的回答比较接近，暂未充分区分，字母为暂时归类，请结合日常表现理解。';
@@ -1893,7 +1916,7 @@ function renderResult(res, isPreview){
     DIMS.forEach(function(dm){
       var p2 = res.pcts[dm.key];
       /* 胜出字母以最终结果为准：平局维若经偏好确认自评，先取自评字母（与代码一致），再谈强度 */
-      var finalLetter = dm.key==="EI" ? res.base[0] : dm.key==="SN" ? res.base[1] : dm.key==="TF" ? res.base[2] : dm.key==="JP" ? res.base[3] : dm.key==="AO" ? res.ao : res.ch;
+      var finalLetter = finalLetterOf(res, dm.key);
       var isSelf = !!(res.selfDims && res.selfDims.indexOf(dm.key) >= 0);
       var rWin = isSelf ? (finalLetter === dm.r) : (p2 < 50);
       var wLetter = isSelf ? finalLetter : (rWin ? dm.r : dm.l);
@@ -1976,6 +1999,27 @@ function fitFont(ctx, text, maxW, startPx, weight){
 }
 var FONT_STACK = "\"PingFang SC\",\"Hiragino Sans GB\",\"Microsoft YaHei\",sans-serif";
 
+/* 最终字母：与结果页、报告代码同源——从最终结果对象（base/ao/ch）读取，
+   平局维即偏好确认自评选定的字母，任何展示组件不得再自行按指数阈值推导 */
+function finalLetterOf(res, key){
+  return key==="EI" ? res.base[0] : key==="SN" ? res.base[1] : key==="TF" ? res.base[2] :
+         key==="JP" ? res.base[3] : key==="AO" ? res.ao : res.ch;
+}
+/* 分享卡片数据准备：六维摘要与结果页读取同一份最终结果。
+   胜出侧一律由最终字母决定（自评确定的维度以自评字母为准），
+   指数为该侧的 1 位小数倾向指数；50.0 平局时两侧指数同为 50.0，突出自评选定的一侧。 */
+function prepareCardData(res){
+  return DIMS.map(function(dm){
+    var p = res.pcts[dm.key];
+    var win = finalLetterOf(res, dm.key);
+    var rightWin = (win === dm.r);
+    return {key:dm.key, l:dm.l, r:dm.r, ln:dm.ln, rn:dm.rn, title:dm.title,
+      leftPct:p, rightPct:100 - p, leftTxt:fmtPct(p), rightTxt:fmtPct(100 - p),
+      winLetter:win, leftWin:!rightWin, rightWin:rightWin,
+      winPctTxt:fmtPct(rightWin ? (100 - p) : p)};
+  });
+}
+
 /* 竖版结果卡片 1080×1440（适配小红书）：品牌紫底 + 白卡，
    人物插画完整 contain 不裁切，六维摘要用真实结果的字母与 1 位小数指数 */
 function saveResultCard(){
@@ -2040,22 +2084,21 @@ function drawCard(res, t, img){
   ctx.fillText("六维倾向摘要", 100, 1054);
   ctx.textAlign = "right"; ctx.fillStyle = "#8a87a6"; ctx.font = "600 24px " + FONT_STACK;
   ctx.fillText("回答倾向指数", 980, 1054);
-  DIMS.forEach(function(dm, i){
-    var p = res.pcts[dm.key];
-    var lp = fmtPct(p), rp = fmtPct(100 - p);
+  /* 六维行数据来自 prepareCardData：胜出侧由最终字母（含偏好确认自评）决定，不按阈值推导 */
+  prepareCardData(res).forEach(function(cd, i){
     var y = 1104 + i*38;
     ctx.textAlign = "left";
-    ctx.fillStyle = p >= 50 ? "#3d346b" : "#55517a";
-    ctx.font = (p >= 50 ? "800" : "600") + " 27px " + FONT_STACK;
-    ctx.fillText(dm.l + " " + dm.ln + " " + lp + "%", 100, y);
+    ctx.fillStyle = cd.leftWin ? "#3d346b" : "#55517a";
+    ctx.font = (cd.leftWin ? "800" : "600") + " 27px " + FONT_STACK;
+    ctx.fillText(cd.l + " " + cd.ln + " " + cd.leftTxt + "%", 100, y);
     ctx.textAlign = "right";
-    ctx.fillStyle = p < 50 ? "#3d346b" : "#55517a";
-    ctx.font = (p < 50 ? "800" : "600") + " 27px " + FONT_STACK;
-    ctx.fillText(rp + "% " + dm.rn + " " + dm.r, 980, y);
+    ctx.fillStyle = cd.rightWin ? "#3d346b" : "#55517a";
+    ctx.font = (cd.rightWin ? "800" : "600") + " 27px " + FONT_STACK;
+    ctx.fillText(cd.rightTxt + "% " + cd.rn + " " + cd.r, 980, y);
     /* 比例条：左段为左侧指数 */
     var barX = 368, barW = 344, barY = y - 19;
     rrPath(ctx, barX, barY, barW, 16, 8); ctx.fillStyle = "#efedf7"; ctx.fill();
-    var fw = Math.max(0, Math.min(barW, barW * p / 100));
+    var fw = Math.max(0, Math.min(barW, barW * cd.leftPct / 100));
     if(fw > 1){ rrPath(ctx, barX, barY, fw, 16, 8); ctx.fillStyle = "#6a4fe0"; ctx.fill(); }
   });
   /* 卡底说明 */
