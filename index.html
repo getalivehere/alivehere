@@ -53,7 +53,7 @@ html.nojs .topbar{position:static}
 .btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
 
 /* ---------- 首页首屏 ---------- */
-.hero{background:linear-gradient(180deg,#f3f0ff 0%,#fbfaff 100%);padding:52px 0 30px;text-align:center;overflow:hidden}
+.hero{background:linear-gradient(180deg,#f3f0ff 0%,#fbfaff 100%);padding:52px 0 30px;text-align:center}
 .hero h1{font-size:52px;line-height:1.15;margin:0 0 14px;color:var(--purple-ink);font-weight:900;letter-spacing:1px}
 .hero .sub{font-size:18px;color:var(--ink2);max-width:620px;margin:0 auto 16px;line-height:1.7}
 .hero-meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
@@ -390,9 +390,21 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
   .pbar i,.btn,.opt .dot,.track i{transition:none!important}
 }
 
+/* 页内打印版式：点「打印 / 保存为 PDF」后进入，只留报告区干净版式，
+   再用浏览器菜单的「打印 / 另存为 PDF」导出（沙盒与内置浏览器里同样可用） */
+.printbar{display:none}
+body.printmode .printbar{display:flex;position:fixed;top:0;left:0;right:0;z-index:400;background:var(--purple-ink);color:#fff;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;font-size:14px;line-height:1.5}
+body.printmode .printbar .btn{flex:none}
+body.printmode{padding-top:54px;background:#fff}
+body.printmode .topbar,body.printmode .res-actions,body.printmode .navgrid,body.printmode .toast,body.printmode .modal-overlay,body.printmode details.faq{display:none!important}
+body.printmode .wrap{max-width:100%;padding:0 6px}
+body.printmode .res-hero{background:#fff;padding:8px 0 4px}
+body.printmode .preview-card{box-shadow:none;border-color:#ccc}
+body.printmode .res-sec{padding:18px 0 2px}
+
 /* 打印 / 保存为 PDF：只输出结果报告区，隐藏导航与全部按钮 */
 @media print{
-  .topbar,.res-actions,.navgrid,.toast,.modal-overlay,details.faq{display:none!important}
+  .topbar,.res-actions,.navgrid,.toast,.modal-overlay,.printbar,details.faq{display:none!important}
   body{background:#fff}
   .wrap{max-width:100%;padding:0 6px}
   .res-hero{background:#fff;padding:8px 0 4px}
@@ -459,6 +471,34 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
   .logo{font-size:16.5px}
   .navlink{padding:8px 6px;font-size:14px}
   .topbar .btn-main{padding:10px 16px;font-size:14px}
+}
+
+/* ---------- 旧内核兜底（手机自带浏览器等不支持 CSS Grid 的环境） ----------
+   Grid 不被识别时 .stage 会退化成逐个竖排（排列错乱、人物区异常拉长）。
+   改用 Flex 实现同样的版式：宽屏 7 人一排；≤560px 用 33.333% 宽 + 首排/末排
+   左侧 16.667% 留白，得到与 Grid 版一致的居中对称 2+3+2。支持 Grid 的浏览器
+   不进入此块，现有排版逐像素不变。 */
+@supports not (display:grid){
+  .stage{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;height:auto}
+  .stage .hchar{flex:1 1 0;min-width:0}
+  @media (max-width:860px){
+    .stage .hchar{flex-basis:25%}
+  }
+  @media (max-width:560px){
+    .stage .hchar{flex:0 0 33.333%}
+    .stage .hchar:nth-child(1),.stage .hchar:nth-child(6){margin-left:16.667%}
+  }
+}
+/* 同一兜底的脚本检测版：连 @supports 都不识别的更旧内核，由文末脚本给 html 加
+   nogrid 类后走这套相同规则（规则与上方 @supports 块保持一致）。 */
+html.nogrid .stage{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;height:auto}
+html.nogrid .stage .hchar{flex:1 1 0;min-width:0}
+@media (max-width:860px){
+  html.nogrid .stage .hchar{flex-basis:25%}
+}
+@media (max-width:560px){
+  html.nogrid .stage .hchar{flex:0 0 33.333%}
+  html.nogrid .stage .hchar:nth-child(1),html.nogrid .stage .hchar:nth-child(6){margin-left:16.667%}
 }
 </style>
 <noscript><style>.view{display:block}#view-quiz,#view-pref,#view-gen,#view-result{display:none}.topbar{position:static}</style></noscript>
@@ -842,6 +882,7 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
   </div>
 </main>
 
+<div class="printbar" role="region" aria-label="打印版式提示"><span>已切换为打印版式：请用浏览器菜单里的「打印 / 另存为 PDF」导出这份报告。</span><button class="btn btn-ghost" data-act="print-exit">退出打印版式</button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- 确认弹窗（覆盖旧记录 / 清除记录） -->
@@ -855,6 +896,7 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
 
 <script>
 window.__alivehereBooted = true; /* 启动标记：供文末看门狗确认主脚本已运行 */
+document.documentElement.classList.remove("nojs"); /* 若看门狗曾因主脚本加载慢误加 nojs，启动后立即撤掉，恢复正常单视图显示 */
 /* ==================== 题目（原创） ====================
    题库：六维各 10 题（每维两个方向各 5 题），共 60 题，10 屏 × 6 题；
    第三轮任务单：题号 2/5/7/8/11/15/17/19/27/31/36/37/38/39/40/42/47/48/50/51/53/55/59/60
@@ -1296,6 +1338,7 @@ function activeQuestions(){ return mode === "main" ? QUESTIONS : suppList; }
 function activeAnswers(){ return mode === "main" ? answers : suppAnswers; }
 
 function showView(id){
+  document.body.classList.remove("printmode"); /* 切视图时自动退出打印版式 */
   var vs = document.querySelectorAll(".view");
   for(var i=0;i<vs.length;i++) vs[i].classList.remove("active");
   document.getElementById("view-"+id).classList.add("active");
@@ -2240,7 +2283,13 @@ function printReport(){
     showToast("图鉴预览为示意结果，不能打印或保存为 PDF；先完成一次测试再来导出。");
     return;
   }
-  window.print();
+  /* 进入页内打印版式（只留报告区的干净版式），再由用户用浏览器菜单打印/另存为 PDF；
+     不直接调用浏览器打印接口，保证在沙盒与 App 内置浏览器里按钮同样有效。 */
+  document.body.classList.add("printmode");
+  window.scrollTo({top:0});
+}
+function exitPrintMode(){
+  document.body.classList.remove("printmode");
 }
 function copyResultCode(){
   if(!currentResult || currentResult.isPreview){
@@ -2329,6 +2378,7 @@ document.addEventListener("click", function(e){
   else if(a === "card") saveResultCard();
   else if(a === "copy") copyResultCode();
   else if(a === "print") printReport();
+  else if(a === "print-exit") exitPrintMode();
   else if(a === "start") handleStart();
   else if(a === "continue") resumeProgress();
   else if(a === "viewlast") viewLastResult();
@@ -2355,10 +2405,17 @@ buildAtlas();
 refreshResumeUI();
 </script>
 <script>
+/* 旧内核检测：给测试元素设 display:grid 后读不回来，即该内核不支持 Grid，
+   给 html 加 nogrid 类启用 Flex 兜底排版（与 @supports 块双保险，覆盖不识别
+   @supports 的更旧内核）。支持 Grid 的浏览器不做任何事。 */
+(function(){ try{ var d=document.createElement("div"); d.style.display="grid"; if(d.style.display!=="grid"){ document.documentElement.classList.add("nogrid"); } }catch(e){} })();
 /* 看门狗：主脚本若未能运行（如个别内置浏览器拦截/解析失败），1500ms 后给 html 加 nojs 类，
    令静态内容（首页全部板块与页脚）直接完整呈现，绝不出现只显示半截页面的状态。
    主脚本正常运行时首行已置位 __alivehereBooted，本脚本不做任何事。 */
 setTimeout(function(){ if(!window.__alivehereBooted){ document.documentElement.classList.add("nojs"); } }, 1500);
+/* 二次检查：主脚本已启动但中途失败（showView 未挂载）时同样进入静态兜底，保证首页完整可读；
+   主脚本正常启动时其首行会移除 nojs，本检查不做任何事。 */
+setTimeout(function(){ if(typeof window.showView !== "function"){ document.documentElement.classList.add("nojs"); } }, 4000);
 </script>
 </body>
 </html>
