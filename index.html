@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <meta name="theme-color" content="#fbfaff" />
-<meta name="description" content="ALIVEHERE 64型人格测试：60道题，从六个维度（含两个自定义扩展维度）探索你的完整人格代码与详细解读，结果仅供自我探索参考。" />
+<meta name="description" content="ALIVEHERE 64型人格测试：60道题，从六个维度探索你的完整人格代码与详细解读，结果仅供自我探索参考。" />
 <meta property="og:title" content="ALIVEHERE 64型人格测试" />
-<meta property="og:description" content="ALIVEHERE 64型人格测试：60道题，从六个维度（含两个自定义扩展维度）探索你的完整人格代码与详细解读，结果仅供自我探索参考。" />
+<meta property="og:description" content="ALIVEHERE 64型人格测试：60道题，从六个维度探索你的完整人格代码与详细解读，结果仅供自我探索参考。" />
 <meta property="og:type" content="website" />
 <meta property="og:image" content="https://getalivehere.github.io/alivehere/assets/fullbody/INTJ.png" />
 <link rel="icon" href="data:," />
@@ -348,8 +348,6 @@ details.faq p{color:var(--ink2);line-height:1.7;font-size:14.5px;margin:10px 0 2
 .notice b{color:#9a6206}
 .dims-explain{font-size:13px;color:var(--mut);margin:-2px 0 14px;line-height:1.65}
 .weak-badge{display:inline-block;background:#fdf0d5;color:#9a6206;font-weight:800;font-size:12px;padding:2px 9px;border-radius:99px;margin-right:6px;vertical-align:1px}
-.ext-note{font-size:11.5px;color:var(--mut);letter-spacing:.3px}
-.dimrow p.ext-note{font-size:11.5px;color:var(--mut);margin-top:3px}
 .deep-sub{font-size:15px;font-weight:800;color:var(--purple-d);margin:0 0 8px}
 .card p#rDeepBase{margin:0 0 18px}
 .card p#rDeepSub{margin:0}
@@ -612,8 +610,8 @@ html.nogrid .stage .hchar{flex:1 1 0;min-width:0}
           <div class="dimrow"><span class="dimnum" style="--dc:#7c5ce0">2</span><div><h3>信息接收</h3><p>S（实感）— N（直觉）</p></div></div>
           <div class="dimrow"><span class="dimnum" style="--dc:#8668e8">3</span><div><h3>决策方式</h3><p>T（思考）— F（情感）</p></div></div>
           <div class="dimrow"><span class="dimnum" style="--dc:#5b3ed6">4</span><div><h3>对外互动</h3><p>J（判断）— P（感知）</p></div></div>
-          <div class="dimrow"><span class="dimnum" style="--dc:#957ff0">5</span><div><h3>与自我的关系</h3><p>A（快速定夺）— O（审慎权衡）</p><p class="ext-note">ALIVEHERE 自定义扩展维度</p></div></div>
-          <div class="dimrow"><span class="dimnum" style="--dc:#4b34b8">6</span><div><h3>情绪表达</h3><p>C（沉静内敛）— H（热情外显）</p><p class="ext-note">ALIVEHERE 自定义扩展维度</p></div></div>
+          <div class="dimrow"><span class="dimnum" style="--dc:#957ff0">5</span><div><h3>与自我的关系</h3><p>A（快速定夺）— O（审慎权衡）</p></div></div>
+          <div class="dimrow"><span class="dimnum" style="--dc:#4b34b8">6</span><div><h3>情绪表达</h3><p>C（沉静内敛）— H（热情外显）</p></div></div>
         </div>
       </div>
     </section>
@@ -683,7 +681,7 @@ html.nogrid .stage .hchar{flex:1 1 0;min-width:0}
   <div class="wrap">
     <div class="pagehead">
       <h1>64 型人格图鉴</h1>
-      <p>16 个基础类型按分析师、外交家、守护者、探险家分为四组。64 型是在基础类型之上，再由测试结果加上 A/O 与 C/H 两组后缀组合而成；其中 A/O、C/H 为 ALIVEHERE 自定义扩展维度。</p>
+      <p>16 个基础类型按分析师、外交家、守护者、探险家分为四组。64 型是在基础类型之上，再由测试结果加上 A/O 与 C/H 两组后缀组合而成。</p>
     </div>
     <div id="atlas"></div>
     <div class="res-actions">
@@ -802,7 +800,7 @@ html.nogrid .stage .hchar{flex:1 1 0;min-width:0}
 
     <section class="res-sec">
       <h2><span class="bar"></span>六维倾向</h2>
-      <p class="dims-explain">以下百分比为「回答倾向指数」，表示你在这组题目中偏向某一侧的程度，不是类型概率或测评准确率。指数落在 45.0%–55.0% 之间时，标注为「倾向不明显」。其中 A/O、C/H 为 ALIVEHERE 自定义扩展维度。</p>
+      <p class="dims-explain">以下百分比为「回答倾向指数」，表示你在这组题目中偏向某一侧的程度，不是类型概率或测评准确率。指数落在 45.0%–55.0% 之间时，标注为「倾向不明显」。</p>
       <div class="card" id="rDims"></div>
     </section>
 
@@ -2032,7 +2030,6 @@ function renderResult(res, isPreview){
     } else {
       noteHtml = '你更偏向 ' + winLetter + '（' + (rightWin ? dm.rn : dm.ln) + '）：' + dm.note[winLetter];
     }
-    if(dm.key === "AO" || dm.key === "CH") noteHtml += '<br><span class="ext-note">ALIVEHERE 自定义扩展维度</span>';
     dimsHtml += '<div class="dimbar"><div class="dtop"><span class="'+(leftWin?"win":"")+' dl">'+dm.l+' '+dm.ln+' '+lp+'%</span><span>'+dm.title+'</span><span class="'+(rightWin?"win":"")+' dr">'+dm.r+' '+dm.rn+' '+rp+'%</span></div>' +
       '<div class="track"><i class="fl" style="width:'+lp+'%"></i><i class="fr" style="width:'+rp+'%"></i></div>' +
       '<div class="dim-note">' + noteHtml + '</div></div>';
